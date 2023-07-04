@@ -77,6 +77,7 @@ class Stft(torch.nn.Module):
                 pad_mode=self.pad_mode,
                 normalized=self.normalized,
                 onesided=self.onesided,
+                return_complex=True,
             )
         else:
             # NOTE(sx): Use Kaldi-fasion padding, maybe wrong
@@ -91,11 +92,26 @@ class Stft(torch.nn.Module):
                 pad_mode=self.pad_mode,
                 normalized=self.normalized,
                 onesided=self.onesided,
+                return_complex=True,
             )
+
+
+        # return_complex is mandatory for torch version >2.0
+        # in former times this were the shapes returned depending on this flag:
+        # * x N x T     - when return_complex=True
+        # * x N x T x 2 - when return_complex=False
+        # see also ttps://github.com/facebookresearch/BinauralSpeechSynthesis/issues/4
+        # in order to mimic the old behavior, real and complex parts of the tensors are stacked:
+        real_part = output.real
+        complex_part = output.real
+        output = torch.stack([real_part, complex_part], -1)
 
         # output: (Batch, Freq, Frames, 2=real_imag)
         # -> (Batch, Frames, Freq, 2=real_imag)
         output = output.transpose(1, 2)
+        # print(f"output shape after transposing: {output.shape}")
+
+
         if multi_channel:
             # output: (Batch * Channel, Frames, Freq, 2=real_imag)
             # -> (Batch, Frame, Channel, Freq, 2=real_imag)
