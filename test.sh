@@ -1,5 +1,4 @@
 . ./path.sh || exit 1;
-export CUDA_VISIBLE_DEVICES=0
 
 stage=1
 stop_stage=1
