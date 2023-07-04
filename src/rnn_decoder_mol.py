@@ -264,7 +264,7 @@ class Decoder(nn.Module):
         else:
             return mel_outputs, stop_outputs, alignments
 
-    def inference(self, memory, stop_threshold=0.5):
+    def inference(self, memory, stop_threshold=0.5, max_decoder_step_incr=True):
         """ Decoder inference
         Args:
             memory: (1, T_enc, D_enc) Encoder outputs
@@ -278,11 +278,19 @@ class Decoder(nn.Module):
         self.initialize_decoder_states(memory, mask=None)
 
         self.attention_layer.init_states(memory)
-        
+
         mel_outputs, alignments = [], []
-        # NOTE(sx): heuristic 
-        max_decoder_step = memory.size(1)*self.encoder_down_factor//self.frames_per_step 
+        # NOTE(sx): heuristic
+        max_decoder_step = memory.size(1)*self.encoder_down_factor//self.frames_per_step
+        # the heuristic does not work for synthesis:
+        # often the synthesised wavs come out too short.
+        # therefore per default I am inreasing synthesized length
+        if max_decoder_step_incr:
+            max_decoder_step += 1
+
         min_decoder_step = memory.size(1)*self.encoder_down_factor // self.frames_per_step - 5
+
+
         while True:
             decoder_input = self.prenet(decoder_input)
 
